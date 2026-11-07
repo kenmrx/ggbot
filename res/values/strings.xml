@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GGBot</string>
+    <string name="skip_service">GGBot 开屏跳过</string>
+    <string name="skip_desc">检测到开屏广告的「跳过」按钮时自动点击，配合 DNS 层拦截一起去广告。</string>
+</resources>

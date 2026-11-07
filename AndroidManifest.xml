@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.ggbot.app">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Shizuku:声明这个权限 server 才会把 binder 递给我们(进程观察者按
+         requestedPermissions 过滤,缺声明则永远收不到);用户点「始终允许」后
+         server 会以 shell 身份 pm grant 授权它。 -->
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
+    <!-- 无障碍被系统摘掉后写回需要它；只能 adb 授权，未授权时功能自动降级 -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+    <!-- 申请电池优化豁免：isAccessibilityTool=false 之后系统按普通应用管，
+         省电策略会收紧；这条让用户能把自己的应用加进 exempt 名单 -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- QUERY_ALL_PACKAGES 是 Play 受限权限且这里并不需要：
+         bypassDialog 只列「带启动入口的应用」，用 queries 声明就能拿到全部可见性 -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:icon="@drawable/ic_launcher"
+        android:roundIcon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/GgTheme"
+        android:alertDialogTheme="@style/GgDialog"
+        android:usesCleartextTraffic="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:configChanges="orientation|screenSize|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+
+        <activity
+            android:name=".CertActivity"
+            android:exported="false"
+            android:label="证书"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+
+        <service
+            android:name=".DnsVpnService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:permission="android.permission.BIND_VPN_SERVICE">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="dns_level_ad_filtering" />
+        </service>
+
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name=".SkipService"
+            android:exported="true"
+            android:label="@string/skip_service"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/skip_config" />
+        </service>
+
+        <service
+            android:name=".FeedJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <!-- Shizuku 的 Binder 接收点（自实现，见 ShizukuGate）。装了 Shizuku 并授权后，
+             server 以 shell 身份 call 这个 provider 把 Binder 递进来，我们才能替用户
+             写回无障碍设置。authority 用「包名.shizuku」是 Shizuku 官方的约定格式，
+             server 按这个串找我们。 -->
+        <provider
+            android:name=".ShizukuGate"
+            android:authorities="com.ggbot.app.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+        <service
+            android:name=".GgTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_stat"
+            android:label="GGBot 防护"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

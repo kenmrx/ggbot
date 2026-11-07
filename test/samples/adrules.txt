@@ -1,0 +1,36 @@
+||0.avmarket.rs^
+||0.myikas.com^
+||0.net.easyjet.com^
+||0.nextyourcontent.com^
+||00000.uno^
+||000123456789.online^
+||000123456789.site^
+||000491b06a.com^
+||000c34b44b.1c3139f0ca.com^
+||0017c6c37c.com^
+||0019x.com^
+||003store.com^
+||00427011ae.com^
+||006.free-counter.co.uk^
+||006.freecounters.co.uk^
+||00609c257b.com^
+||009f45b51c.com^
+||00a39e6dfd.com^
+||00a4722597.com^
+||00c6c88efd.e5ad8b54ee.com^
+||00c8741ed3.com^
+||00ef400e98.3a1ebd5d26.com^
+||00k456wyh.com^
+||00px.net^
+||00xvppy.cn^
+||*-ad-sign.byteimg.com^
+||*-ad.a.yximgs.com^
+||*-applog.fqnovel.com^
+||*-datareceiver.aki-game.net^
+||*-default-cn.rum.aliyuncs.com^
+||*-sdk.rum.aliyuncs.com^
+/^.+stat\.kugou\.com/
+/^admarvel\./
+/^admaster\./
+[Adblock Plus 2.0]
+! Title: AdRules DNS List

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      全局弹窗主题：设置页有 23 处 AlertDialog.Builder，逐个改底色容易漏、也容易改坏。
+      在这里统一指定，所有弹窗自动用深绿卡片底 + 品牌色。
+    -->
+    <style name="GgDialog" parent="@android:style/Theme.Material.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/dialog_bg</item>
+        <item name="android:colorBackground">#141C18</item>
+        <item name="android:textColorPrimary">#E9F2ED</item>
+        <item name="android:textColorSecondary">#7F9189</item>
+        <item name="android:colorAccent">#35D07F</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowMinWidthMajor">72%</item>
+        <item name="android:windowMinWidthMinor">88%</item>
+    </style>
+
+    <!--
+      应用主主题：显式把状态栏与导航栏染成页面同色。
+      不染的话系统默认导航栏是白底（截图里的底部白条），把整体深色切断在最后一条边上。
+    -->
+    <style name="GgTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#0B0F0D</item>
+        <item name="android:statusBarColor">#0B0F0D</item>
+        <item name="android:navigationBarColor">#0B0F0D</item>
+    </style>
+</resources>

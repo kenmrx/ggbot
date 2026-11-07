@@ -1,0 +1,46 @@
+name: GGBot CI
+
+# 门闸即发布前最后一道防线：test.sh 覆盖 9 个基础套件，
+# gate.sh 再跑全部 20 个测试类（含 RespGate/TunGuard/DoH/Integrity 等进阶项），
+# build.sh 需要 GGBOT_KS_PASS 环境变量（CI 里用 secrets 提供调试口令）。
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: 回归（test.sh + gate.sh 全套件）
+    runs-on: macos-latest
+    env:
+      GGBOT_KS_PASS: ${{ secrets.GGBOT_KS_PASS }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: 安装 Android SDK（platform-34 + build-tools 34.0.0）
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-34" "build-tools;34.0.0"
+
+      - name: 跑基础回归（9 套件）
+        run: ./test.sh
+
+      - name: 全量门闸（20 个测试类）
+        run: ./gate.sh
+
+      - name: 出包
+        run: ./build.sh
+
+      - name: 上传 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GGBot-apk
+          path: GGBot.apk

@@ -1,0 +1,6 @@
+build/
+*.idsig
+.DS_Store
+ggbot.keystore
+GGBot.apk
+GGBot-v1.0-20261028.apk

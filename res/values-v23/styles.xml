@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- API 23+: 状态栏图标用浅色（深底上白图标），并染导航栏。 -->
+    <style name="GgTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#0B0F0D</item>
+        <item name="android:statusBarColor">#0B0F0D</item>
+        <item name="android:navigationBarColor">#0B0F0D</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

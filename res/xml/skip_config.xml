@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  这份配置是照着 DSH-Go 1.0.7 的 accessibility-service 资源逐条比对出来的
+  （aapt2 dump xmltree 解出的原值），不是猜的。原始值：
+    accessibilityEventTypes  = 0x00401830
+    accessibilityFlags      = 0x00000052
+    canPerformGestures      = true
+    canTakeScreenshot       = true
+    isAccessibilityTool     = false
+
+  三个真正的保活要素（跟事件多少无关）：
+
+  1. isAccessibilityTool="false"
+     Android 12+ 按这个值决定走哪套策略。声明 true 会被当成辅助工具，
+     系统反而要求它「安静」；声明 false 是明确告诉系统「我不是辅助工具」，
+     系统按普通应用管理，省电/后台策略不套无障碍那套额外的严格限制。
+     DSH-Go 显式写 false，这是它能常驻的一条关键。GGBot 原来没有这个属性，
+     targetSdk=34 下走的是默认分支，正好落在会被省电策略收紧的那一侧。
+
+  2. canTakeScreenshot + canPerformGestures
+     两个能力声明。系统会给带这些能力的服务更高的常驻优先级（它得随时能响应），
+     同时也让服务在 bind 记录里带上 capability 位，摘除判定更保守。
+
+  3. exported="true"（在 AndroidManifest.xml 里）
+     原来写的是 exportex="false" —— 这是个更直接的错：
+     无障碍服务是系统进程来 bind 的，exported=false 时系统根本拿不到它。
+     表现就是「拨了开关、看起来开着，但服务实际没连上」，也就谈不上保活。
+     DSH-Go 那边是 exported="true" + BIND_ACCESSIBILITY_SERVICE 权限双重限制，
+     权限本身已经把外部应用挡在外面，exported=true 不降低安全性。
+
+  事件类型（0x00401830 = VIEW_TEXT_CHANGED | WINDOW_STATE_CHANGED |
+  WINDOW_CONTENT_CHANGED | VIEW_SCROLLED | GESTURE_DETECTION_START）
+  这里用 typeAllMask 是比 DSH-Go 更宽的一档，理由见 SkipService 心跳注释：
+  它要的是「事件流永不中断」，全量掩码在息屏静置时仍能收到通知/焦点类事件，
+  判活数据更连续。业务侧仍只处理换页/内容变化两类，其余立刻 return。
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/skip_desc"
+    android:accessibilityEventTypes="typeAllMask"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows|flagIncludeNotImportantViews"
+    android:canRetrieveWindowContent="true"
+    android:canPerformGestures="true"
+    android:canTakeScreenshot="true"
+    android:isAccessibilityTool="false"
+    android:notificationTimeout="100" />
