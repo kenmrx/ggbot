@@ -81,13 +81,17 @@ public final class BabyHome {
     private BabyHome() {
     }
 
-    /** 同步拉取；必须在后台线程调用。 */
+    /** 同步拉取；必须在后台线程调用。失败原因镜像到 Diag（logcat 可查）。 */
     public static Result fetch() {
         try {
-            return new Result(fetchList(), null);
+            List<Child> list = fetchList();
+            Diag.push("宝宝回家：拉取到 " + list.size() + " 条", "info");
+            return new Result(list, null);
         } catch (Exception e) {
-            return new Result(new ArrayList<>(),
-                    e.getClass().getSimpleName());
+            String why = e.getClass().getSimpleName()
+                    + (e.getMessage() == null ? "" : ": " + e.getMessage());
+            Diag.push("宝宝回家拉取失败: " + why, "warn");
+            return new Result(new ArrayList<>(), why);
         }
     }
 
@@ -98,8 +102,14 @@ public final class BabyHome {
             c.setConnectTimeout(CONNECT_MS);
             c.setReadTimeout(READ_MS);
             c.setRequestMethod("GET");
+            c.setInstanceFollowRedirects(true);
             c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 12) GGBot/1.0");
             c.setRequestProperty("access_token", "");
+            // 系统证实能拿到数据；应用内失败的常见差异是压缩流与缓存池，
+            // 全部显式关掉，保证行为与 curl 一致
+            c.setRequestProperty("Accept-Encoding", "identity");
+            c.setRequestProperty("Cache-Control", "no-cache");
+            c.setUseCaches(false);
             if (c.getResponseCode() != 200) {
                 throw new IllegalStateException("HTTP " + c.getResponseCode());
             }
