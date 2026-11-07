@@ -23,7 +23,7 @@ $BT/aapt2 link -o build/base.apk \
   -A assets \
   --java build/gen \
   --min-sdk-version 24 --target-sdk-version 34 \
-  --version-code 41 --version-name 1.9.0
+  --version-code 42 --version-name 1.9.1
 
 echo "== 3/6 javac =="
 find src build/gen -name "*.java" > build/sources.txt

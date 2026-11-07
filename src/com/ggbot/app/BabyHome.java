@@ -35,7 +35,7 @@ public final class BabyHome {
      */
     private static final String LIST_URL =
             "https://www.mca.gov.cn/lljz/jmgc-relief-seeking/familySeekers/querySeekingList"
-                    + "?personType=0&releaseTime=&pageNum=1&pageSize=20";
+                    + "?personType=0&releaseTime=&pageNum=1&pageSize=24";
     /** 照片前缀。 */
     public static final String PHOTO_BASE = "https://www.mca.gov.cn/lljz/lljz_files/";
     /** 全国省级行政区（findRescuePlace 以这些名称开头）。 */
@@ -53,6 +53,17 @@ public final class BabyHome {
 
     /** 儿童判定上限（周岁，含 17）。 */
     static final int UNDER_AGE_MAX = 17;
+
+    /** 每批展示的目标条数：省份过滤后也尽量凑满。 */
+    static final int BATCH_SIZE = 10;
+
+    /** 同 id 去重（翻页补齐时可能重叠）。 */
+    static boolean containsChild(List<Child> list, Child c) {
+        for (Child o : list) {
+            if (o.number != null && o.number.equals(c.number)) return true;
+        }
+        return false;
+    }
 
     private static final int CONNECT_MS = 6000;
     private static final int READ_MS = 8000;
@@ -114,9 +125,20 @@ public final class BabyHome {
         try {
             List<Child> list = fetchList(pageNum);
             if (province != null && !province.isEmpty()) {
+                // 省内凑批：单页过滤后常常只剩两三人，自动翻页补到 10 个
                 List<Child> local = new ArrayList<>();
-                for (Child c : list) {
-                    if (c.place != null && c.place.startsWith(province)) local.add(c);
+                int page = pageNum;
+                int attempts = 0;
+                while (attempts < 3) {
+                    for (Child c : list) {
+                        if (c.place != null && c.place.startsWith(province)
+                                && !containsChild(local, c)) local.add(c);
+                        if (local.size() >= BATCH_SIZE) break;
+                    }
+                    if (local.size() >= BATCH_SIZE) break;
+                    page++;
+                    attempts++;
+                    list = fetchList(page);
                 }
                 list = local;
             }
@@ -139,7 +161,7 @@ public final class BabyHome {
         } catch (Exception ignored) {
         }
         List<Child> all = fetchOne("https://www.mca.gov.cn/lljz/jmgc-relief-seeking/familySeekers"
-                + "/querySeekingList?personType=&releaseTime=&pageNum=" + pageNum + "&pageSize=20");
+                + "/querySeekingList?personType=&releaseTime=&pageNum=" + pageNum + "&pageSize=24");
         List<Child> kids = new ArrayList<>();
         for (Child c : all) {
             if (isUnderAge(c.age)) kids.add(c);

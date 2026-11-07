@@ -440,8 +440,8 @@ public class SettingsActivity extends Activity {
         bar.addView(box, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        // 右上角公益入口：宝宝回家——民政部救助寻亲数据 + 官方渠道，可刷新
-        TextView baby = tv("宝宝回家", 13f, FG, false);
+        // 右上角公益入口：宝宝回家——「♥→宝宝回家」引导样式，距赞赏一掌远
+        TextView baby = tv("♥→ 宝宝回家", 13f, FG, false);
         baby.setGravity(Gravity.CENTER);
         baby.setPadding(dp(10), 0, dp(10), 0);
         baby.setBackground(ui.rippleCard(CARD2, 12, BORDER));
@@ -451,8 +451,11 @@ public class SettingsActivity extends Activity {
             v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
             showBabyHome();
         });
-        bar.addView(baby, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)));
+        // 按钮自占权重+右外边距：与赞赏(最右)之间留出呼吸距离
+        LinearLayout.LayoutParams babyLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(42));
+        babyLp.setMarginEnd(dp(14));
+        bar.addView(baby, babyLp);
 
         // 右上角赞赏入口：收款码随 APK 签名分发，点按弹本地二维码
         TextView donate = tv("赞赏", 14f, FG, false);
@@ -1955,7 +1958,7 @@ public class SettingsActivity extends Activity {
         scroll.addView(box);
 
         TextView head = new TextView(this);
-        head.setText("民政部全国救助寻亲网 · 最新 " + r.children.size() + " 条"
+        head.setText("民政部全国救助寻亲网 · 本批 " + r.children.size() + " 人"
                 + "\n这些孩子正在各地救助站等待家人 · 发现地=被救助地点，不等于走失地点"
                 + "\n认出孩子请拨打 110 或联系记录上的救助站 · 照片实时加载不本地缓存");
         head.setTextSize(11.5f);
