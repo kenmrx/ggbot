@@ -1,0 +1,3 @@
+# 赞赏码随 APK 签名分发（应用内「赞赏」入口），防拆包换码校验见 Integrity.java。
+# GitHub Sponsors 需要另行开通，此处暂留自定义入口占位。
+custom: ['https://github.com/kenmrx/ggbot#安装直接下载即用']
