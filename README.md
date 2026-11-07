@@ -7,8 +7,6 @@
 GGBot 是一款 Android 本机 VPN 型广告过滤应用：基于 `VpnService` 建立本地 TUN 隧道，
 在用户态完成 **DNS 拦截 + TCP 转发 + HTTPS MITM 解密 + 规则引擎匹配**。
 
-![首页](docs/img/home-on.png)
-
 ## 特性
 
 - **VPN 型 DNS 拦截**：用户态解析/构造 DNS 报文，域名与 CNAME 链双重判定，带 TTL 缓存与并发查询合并
