@@ -34,7 +34,7 @@ javac -nowarn --release 8 -classpath "$JAR:${LIBS}build/gate/app" -d build/gate/
 
 fail=0
 total=0
-for t in CoreTest TcpTest TcpStateTest HttpTest EngineTest FeedTest AdvTest RouteTest DnsBlockTest QueryLogTest RewriteTest SkipMatcherTest HardTest RespGateFeedTest RespGateEdgeTest DoHTest TunGuardTest A11yTest OpsTest IntegrityTest; do
+for t in CoreTest TcpTest TcpStateTest HttpTest EngineTest FeedTest AdvTest RouteTest DnsBlockTest QueryLogTest RewriteTest HardTest RespGateFeedTest RespGateEdgeTest DoHTest TunGuardTest A11yTest OpsTest IntegrityTest SkipMatcherTest; do
   echo
   echo "──── $t ────"
   if java -classpath "$JAR:${LIBS}build/gate/app:build/gate/test" "$t" > build/gate/$t.log 2>&1; then
