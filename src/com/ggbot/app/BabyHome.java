@@ -125,17 +125,18 @@ public final class BabyHome {
         try {
             List<Child> list = fetchList(pageNum);
             if (province != null && !province.isEmpty()) {
-                // 省内凑批：单页过滤后常常只剩两三人，自动翻页补到 10 个
+                // 省份模式：跨页扫捞该省全部记录（单省总量少，两三页就完，
+                // 一次给全比「每批10个」更符合「看看我们省的孩子」的预期）。
+                // 从用户选定的页开始，向后最多扫 10 页或 total 上限。
                 List<Child> local = new ArrayList<>();
                 int page = pageNum;
                 int attempts = 0;
-                while (attempts < 3) {
+                while (attempts < 10) {
                     for (Child c : list) {
                         if (c.place != null && c.place.startsWith(province)
                                 && !containsChild(local, c)) local.add(c);
-                        if (local.size() >= BATCH_SIZE) break;
                     }
-                    if (local.size() >= BATCH_SIZE) break;
+                    if (list.size() < 24) break;        // 不足一页=到头了
                     page++;
                     attempts++;
                     list = fetchList(page);

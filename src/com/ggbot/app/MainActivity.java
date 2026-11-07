@@ -440,9 +440,9 @@ public class MainActivity extends Activity {
         LinearLayout head = new LinearLayout(this);
         head.setOrientation(LinearLayout.HORIZONTAL);
         head.setGravity(Gravity.CENTER_VERTICAL);
-        head.addView(ui.tv(title, 13.5f, MUTED, true), new LinearLayout.LayoutParams(0,
+        head.addView(ui.tv(title, 15f, MUTED, true), new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        TextView v = ui.tv("—", 13.5f, FG, true);
+        TextView v = ui.tv("—", 15f, FG, true);
         head.addView(v);
         LinearLayout wrap = new LinearLayout(this);
         wrap.setOrientation(LinearLayout.VERTICAL);
@@ -466,12 +466,12 @@ public class MainActivity extends Activity {
         for (int i = 0; i < 3; i++) {
             LinearLayout cell = new LinearLayout(this);
             cell.setOrientation(LinearLayout.VERTICAL);
-            TextView val = ui.tv("—", 16f, FG, true);
+            TextView val = ui.tv("—", 20f, FG, true);
             meterVals[isBlock ? 0 : 1][i] = val;
             val.setGravity(Gravity.END);
             cell.addView(val, new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            TextView lab = ui.tv(labels[i], 11f, MUTED, false);
+            TextView lab = ui.tv(labels[i], 12.5f, MUTED, false);
             lab.setGravity(Gravity.END);
             cell.addView(lab, new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
