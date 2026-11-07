@@ -27,10 +27,14 @@ import java.util.List;
  */
 public final class BabyHome {
 
-    /** 列表接口（游客 GET）。 */
+    /**
+     * 列表接口（游客 GET）。personType 分类：0=未成年人（儿童）、1=成年人、
+     * 2=老年人（2026-11-07 枚举实测，0 档样本年龄 1~17 岁）。
+     * 本功能聚焦走失儿童，默认查 0 档。
+     */
     private static final String LIST_URL =
             "https://www.mca.gov.cn/lljz/jmgc-relief-seeking/familySeekers/querySeekingList"
-                    + "?personType=&releaseTime=&pageNum=1&pageSize=20";
+                    + "?personType=0&releaseTime=&pageNum=1&pageSize=20";
     /** 照片前缀。 */
     public static final String PHOTO_BASE = "https://www.mca.gov.cn/lljz/lljz_files/";
     /** 官网入口（lljz 壳页，公网直达）。 */
@@ -96,14 +100,22 @@ public final class BabyHome {
     }
 
     private static List<Child> fetchList() throws Exception {
-        // 两路参数都试：不带任何参数（与网页首屏一致）→ 带 pageSize 参数
+        // 儿童(personType=0)为主；异常时回落全量再过滤未成年
         try {
-            List<Child> r = fetchOne("https://www.mca.gov.cn/lljz/jmgc-relief-seeking/familySeekers/querySeekingList");
+            List<Child> r = fetchOne(LIST_URL);
             if (!r.isEmpty()) return r;
         } catch (Exception ignored) {
         }
-        return fetchOne("https://www.mca.gov.cn/lljz/jmgc-relief-seeking/familySeekers/querySeekingList"
-                + "?personType=&releaseTime=&pageNum=1&pageSize=20");
+        List<Child> all = fetchOne("https://www.mca.gov.cn/lljz/jmgc-relief-seeking/familySeekers"
+                + "/querySeekingList?personType=&releaseTime=&pageNum=1&pageSize=20");
+        List<Child> kids = new ArrayList<>();
+        for (Child c : all) {
+            try {
+                if (Integer.parseInt(c.age.trim()) < 18) kids.add(c);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return kids;
     }
 
     private static List<Child> fetchOne(String url) throws Exception {
