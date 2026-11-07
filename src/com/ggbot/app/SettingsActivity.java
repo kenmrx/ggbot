@@ -19,6 +19,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Switch;
@@ -1904,44 +1905,140 @@ public class SettingsActivity extends Activity {
     }
 
     private void showBabyHomeResult(BabyHome.Result r) {
-        StringBuilder sb = new StringBuilder(1024);
         if (r.children.isEmpty()) {
-            sb.append("实时数据暂时拉取不到（接口对部分网络不开放）。\n\n")
-                    .append("寻亲认亲请走官方渠道：\n")
-                    .append("· 全国救助寻亲网（民政部）：\n  ")
-                    .append(BabyHome.OFFICIAL_SITE).append("\n")
-                    .append("· 发现疑似走失儿童：拨打 110 或全国打拐热线\n")
-                    .append("· 宝贝回家志愿者协会：baobeihuijia.com\n\n")
-                    .append("每次打开都会重新尝试实时数据。");
-        } else {
-            sb.append("来自民政部全国救助寻亲网 · 共 ").append(r.children.size()).append(" 条\n\n");
-            for (int i = 0; i < r.children.size() && i < 10; i++) {
-                BabyHome.Child c = r.children.get(i);
-                sb.append("· ").append(c.name.isEmpty() ? "(信息待完善)" : c.name);
-                if (!c.gender.isEmpty()) sb.append(" · ").append(c.gender);
-                if (!c.age.isEmpty()) sb.append(" · ").append(c.age);
-                if (!c.place.isEmpty()) sb.append("\n  走失地点：").append(c.place);
-                if (!c.date.isEmpty()) sb.append("\n  日期：").append(c.date);
-                if (!c.status.isEmpty()) sb.append("\n  状态：").append(c.status);
-                sb.append("\n\n");
-            }
-            sb.append("照片与完整信息请在官网查看（应用内不二次缓存儿童数据）。");
+            String msg = "实时数据暂时拉取不到（" + r.error + "）。\n\n"
+                    + "寻亲认亲请走官方渠道：\n"
+                    + "· 全国救助寻亲网（民政部）\n"
+                    + "· 发现疑似走失儿童：拨打 110 或全国打拐热线\n"
+                    + "· 宝贝回家志愿者协会：baobeihuijia.com\n\n"
+                    + "每次打开都会重新尝试实时数据。";
+            Ui.dialog(this)
+                    .setTitle("宝宝回家 · 团圆行动")
+                    .setMessage(msg)
+                    .setPositiveButton("重试", (d, w) -> showBabyHome())
+                    .setNeutralButton("打开官网", (d, w) -> openBabySite())
+                    .setNegativeButton("关闭", null)
+                    .show();
+            return;
         }
-        Ui.dialog(this)
+
+        // 自绘滚动列表：每条 = 照片(异步拉) + 信息行。数据是政府主动公开的寻亲信息
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(6), dp(4), dp(6), dp(4));
+        scroll.addView(box);
+
+        TextView head = new TextView(this);
+        head.setText("民政部全国救助寻亲网 · 最新 " + r.children.size() + " 条\n照片实时加载，不本地缓存");
+        head.setTextSize(11.5f);
+        head.setTextColor(MUTED);
+        head.setPadding(dp(10), dp(8), dp(10), dp(8));
+        box.addView(head);
+
+        for (int i = 0; i < r.children.size() && i < 20; i++) {
+            box.addView(babyCard(r.children.get(i)));
+        }
+
+        new android.app.AlertDialog.Builder(this, dialogThemeId())
                 .setTitle("宝宝回家 · 团圆行动")
-                .setMessage(sb.toString())
+                .setView(scroll)
                 .setPositiveButton("刷新", (d, w) -> showBabyHome())
-                .setNeutralButton("打开官网", (d, w) -> {
-                    try {
-                        startActivity(new android.content.Intent(
-                                android.content.Intent.ACTION_VIEW,
-                                android.net.Uri.parse(BabyHome.OFFICIAL_SITE)));
-                    } catch (Exception e) {
-                        toast("没有可用的浏览器");
-                    }
-                })
+                .setNeutralButton("打开官网", (d, w) -> openBabySite())
                 .setNegativeButton("关闭", null)
                 .show();
+    }
+
+    /** 单条寻亲卡片：照片左侧异步加载，右侧文字信息。 */
+    private LinearLayout babyCard(BabyHome.Child c) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(dp(8), dp(8), dp(8), dp(8));
+
+        final ImageView pic = new ImageView(this);
+        pic.setBackgroundColor(CARD2);
+        pic.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        pic.setContentDescription("寻亲照片");
+        row.addView(pic, new LinearLayout.LayoutParams(dp(96), dp(128)));
+
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setPadding(dp(12), 0, 0, 0);
+        addBabyLine(col, c.name.isEmpty() ? "（信息待完善）" : c.name, 15f, FG, true);
+        if (!c.gender.isEmpty() || !c.age.isEmpty()) {
+            addBabyLine(col, join(" · ", c.gender, c.age.isEmpty() ? "" : "约 " + c.age + " 岁",
+                    c.height.isEmpty() ? "" : "身高 " + c.height + "cm"), 12f, MUTED, false);
+        }
+        if (!c.place.isEmpty()) addBabyLine(col, "发现于 " + c.place, 12f, FG, false);
+        if (!c.time.isEmpty()) addBabyLine(col, "时间 " + c.time, 12f, MUTED, false);
+        if (!c.unit.isEmpty()) addBabyLine(col, c.unit, 11f, DIM, false);
+        if (!c.number.isEmpty()) addBabyLine(col, "编号 " + c.number, 10.5f, DIM, false);
+        row.addView(col, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        loadBabyPhoto(pic, c);
+        return row;
+    }
+
+    private void addBabyLine(LinearLayout col, String text, float sp, int color, boolean bold) {
+        if (text == null || text.isEmpty()) return;
+        TextView t = new TextView(this);
+        t.setText(text);
+        t.setTextSize(sp);
+        t.setTextColor(color);
+        if (bold) t.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        t.setPadding(0, dp(2), 0, dp(2));
+        col.addView(t);
+    }
+
+    private static String join(String sep, String... parts) {
+        StringBuilder sb = new StringBuilder();
+        for (String p2 : parts) {
+            if (p2 == null || p2.isEmpty()) continue;
+            if (sb.length() > 0) sb.append(sep);
+            sb.append(p2);
+        }
+        return sb.toString();
+    }
+
+    /** 照片实时拉取：成功即填，失败留底色。不做磁盘缓存。 */
+    private void loadBabyPhoto(final ImageView pic, BabyHome.Child c) {
+        final String url = BabyHome.photoUrl(c);
+        new Thread(() -> {
+            try {
+                java.net.HttpURLConnection conn = (java.net.HttpURLConnection)
+                        new java.net.URI(url).toURL().openConnection();
+                conn.setConnectTimeout(6000);
+                conn.setReadTimeout(8000);
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 12) GGBot/1.0");
+                if (conn.getResponseCode() != 200) return;
+                java.io.InputStream in = new java.io.BufferedInputStream(conn.getInputStream(), 8192);
+                final android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeStream(in);
+                try { in.close(); } catch (Exception ignored) {}
+                if (bmp == null) return;
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    pic.setImageBitmap(bmp);
+                });
+            } catch (Exception ignored) {
+            }
+        }, "ggbot-babyhome-pic").start();
+    }
+
+    private void openBabySite() {
+        try {
+            startActivity(new android.content.Intent(
+                    android.content.Intent.ACTION_VIEW,
+                    android.net.Uri.parse(BabyHome.OFFICIAL_SITE)));
+        } catch (Exception e) {
+            toast("没有可用的浏览器");
+        }
+    }
+
+    /** 取应用弹窗主题 id（Ui.dialog 的 getIdentifier 逻辑同步到这里供 setView 弹窗用）。 */
+    private int dialogThemeId() {
+        int id = getResources().getIdentifier("GgDialog", "style", getPackageName());
+        return id != 0 ? id : android.R.style.Theme_Material_Dialog_Alert;
     }
 
     /** 赞赏弹窗：本地打包的收款码，不加载任何网页内容。 */
