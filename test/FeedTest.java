@@ -262,6 +262,19 @@ public class FeedTest {
         check("突变判定：小源 500→10 放行（低于采样基准，不误伤）", !FeedTest.isSuspectedDrop(500, 10));
         check("突变判定：首装 0→50000 放行（oldCount=0 不比较）", !FeedTest.isSuspectedDrop(0, 50000));
         check("突变判定：1000→20000 放行（扩容不拦）", !FeedTest.isSuspectedDrop(1000, 20000));
+
+        // ── 儿童年龄硬过滤：服务端 0 档混有成年记录（实测 35/45/65/70 岁）
+        check("年龄：1 岁是儿童", com.ggbot.app.BabyHome.isUnderAge("1"));
+        check("年龄：17 岁是儿童（含边界）", com.ggbot.app.BabyHome.isUnderAge("17"));
+        check("年龄：17.4 岁舍入到 17 保留", com.ggbot.app.BabyHome.isUnderAge("17.4"));
+        check("年龄：17.5 岁舍入到 18 拒收", !com.ggbot.app.BabyHome.isUnderAge("17.5"));
+        check("年龄：18 岁不是", !com.ggbot.app.BabyHome.isUnderAge("18"));
+        check("年龄：35 岁不是", !com.ggbot.app.BabyHome.isUnderAge("35"));
+        check("年龄：70 岁不是", !com.ggbot.app.BabyHome.isUnderAge("70"));
+        check("年龄：空串不是", !com.ggbot.app.BabyHome.isUnderAge(""));
+        check("年龄：非数字不是", !com.ggbot.app.BabyHome.isUnderAge("abc"));
+        check("年龄：负数不是", !com.ggbot.app.BabyHome.isUnderAge("-3"));
+        check("年龄：null 不是", !com.ggbot.app.BabyHome.isUnderAge(null));
     }
 
     /** 与 Feeds.update 里的突变判定同一公式；改一处必须同步另一处。 */

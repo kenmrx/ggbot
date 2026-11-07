@@ -28,9 +28,10 @@ import java.util.List;
 public final class BabyHome {
 
     /**
-     * 列表接口（游客 GET）。personType 分类：0=未成年人（儿童）、1=成年人、
-     * 2=老年人（2026-11-07 枚举实测，0 档样本年龄 1~17 岁）。
-     * 本功能聚焦走失儿童，默认查 0 档。
+     * 列表接口（游客 GET）。personType 分类（2026-11-07 大样本实测）：
+     * 0=以未成年人为主但混有历史成年记录（实测见 35/45/65/70 岁）、
+     * 1=成年人、2=老年人。服务端过滤不可靠——本功能聚焦儿童，
+     * 默认查 0 档并在客户端硬过滤 <18 岁（见 UNDER_AGE_MAX）。
      */
     private static final String LIST_URL =
             "https://www.mca.gov.cn/lljz/jmgc-relief-seeking/familySeekers/querySeekingList"
@@ -40,6 +41,9 @@ public final class BabyHome {
     /** 官网入口（lljz 壳页，公网直达）。 */
     public static final String OFFICIAL_SITE = "https://www.mca.gov.cn/lljz/";
     public static final String POLICE_PHONE = "110";
+
+    /** 儿童判定上限（周岁，含 17）。 */
+    static final int UNDER_AGE_MAX = 17;
 
     private static final int CONNECT_MS = 6000;
     private static final int READ_MS = 8000;
@@ -110,10 +114,7 @@ public final class BabyHome {
                 + "/querySeekingList?personType=&releaseTime=&pageNum=1&pageSize=20");
         List<Child> kids = new ArrayList<>();
         for (Child c : all) {
-            try {
-                if (Integer.parseInt(c.age.trim()) < 18) kids.add(c);
-            } catch (NumberFormatException ignored) {
-            }
+            if (isUnderAge(c.age)) kids.add(c);
         }
         return kids;
     }
@@ -217,9 +218,25 @@ public final class BabyHome {
             if (time.isEmpty()) time = pick(body, "releaseTime");
             String unit = pick(body, "rescueUnit");
             String number = pick(body, "childNumber");
+            if (!isUnderAge(age)) continue;        // 服务端混排，客户端硬过滤
             out.add(new Child(name, gender, age, height, place, time, unit, number, pic));
         }
         return out;
+    }
+
+    /**
+     * 儿童年龄判定。age 来自服务端，形态不稳：空串、小数（"6.5"）、
+     * 异常大值都见过——解析失败一律当非儿童丢弃，宁缺毋滥。
+     */
+    public static boolean isUnderAge(String age) {
+        if (age == null || age.isEmpty()) return false;
+        try {
+            double v = Double.parseDouble(age.trim());
+            if (v < 0 || v > UNDER_AGE_MAX + 1) return false;   // 边界容错：四舍五入到 18 的 17.5 保留
+            return Math.round(v) <= UNDER_AGE_MAX;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     /** 拼照片绝对 URL。 */
