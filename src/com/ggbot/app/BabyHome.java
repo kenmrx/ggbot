@@ -96,19 +96,28 @@ public final class BabyHome {
     }
 
     private static List<Child> fetchList() throws Exception {
+        // 两路参数都试：不带任何参数（与网页首屏一致）→ 带 pageSize 参数
+        try {
+            List<Child> r = fetchOne("https://www.mca.gov.cn/lljz/jmgc-relief-seeking/familySeekers/querySeekingList");
+            if (!r.isEmpty()) return r;
+        } catch (Exception ignored) {
+        }
+        return fetchOne("https://www.mca.gov.cn/lljz/jmgc-relief-seeking/familySeekers/querySeekingList"
+                + "?personType=&releaseTime=&pageNum=1&pageSize=20");
+    }
+
+    private static List<Child> fetchOne(String url) throws Exception {
         HttpURLConnection c = null;
         try {
-            c = (HttpURLConnection) URI.create(LIST_URL).toURL().openConnection();
+            c = (HttpURLConnection) URI.create(url).toURL().openConnection();
             c.setConnectTimeout(CONNECT_MS);
             c.setReadTimeout(READ_MS);
             c.setRequestMethod("GET");
             c.setInstanceFollowRedirects(true);
+            // 与系统 curl 成功行为逐字段对齐：只带 UA，其余全默认——
+            // 之前自定义的 access_token/identity/no-cache 头反而可能触发
+            // 网关的 WAF 分支（curl 不带这些头能拿到 200）
             c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 12) GGBot/1.0");
-            c.setRequestProperty("access_token", "");
-            // 系统证实能拿到数据；应用内失败的常见差异是压缩流与缓存池，
-            // 全部显式关掉，保证行为与 curl 一致
-            c.setRequestProperty("Accept-Encoding", "identity");
-            c.setRequestProperty("Cache-Control", "no-cache");
             c.setUseCaches(false);
             if (c.getResponseCode() != 200) {
                 throw new IllegalStateException("HTTP " + c.getResponseCode());
@@ -138,18 +147,52 @@ public final class BabyHome {
         return buf.toString("UTF-8");
     }
 
-    /** 极简 JSON 解析：逐对象提取需要的字段。不可信输入，尽力而为。 */
+    /**
+     * 极简 JSON 解析：用「花括号配平 + 字符串感知」扫出完整对象，再逐对象提字段。
+     *
+     * 为什么不能用「找下一个 }」：真实数据里有嵌套对象（cellStyleMap:{}），
+     * 简易扫描会把对象在嵌套的 } 处截断，body 里永远见不到 picUrl——
+     * v1.8.1 在真机上解析恒为 0 条的根因（桌面 happy-path 没测嵌套，漏了）。
+     */
     static List<Child> parseJson(String json) {
         List<Child> out = new ArrayList<>();
         if (json == null) return out;
-        int pos = 0;
-        while (out.size() < 50) {
-            int obj = json.indexOf('{', pos);
-            if (obj < 0) break;
-            int end = json.indexOf('}', obj);
-            if (end < 0) break;
-            String body = json.substring(obj + 1, end);
-            pos = end + 1;
+        // 锚定 "list": [ —— 顶层容器对象(含 pageBean)不能当记录扫描,
+        // 否则整包会出一条「巨型对象」把真实记录全吞掉
+        int anchor = json.indexOf("\"list\"");
+        int i = anchor < 0 ? 0 : json.indexOf('[', anchor);
+        if (i < 0) return out;
+        int n = json.length();
+        while (i < n && out.size() < 50) {
+            if (json.charAt(i) != '{') {
+                i++;
+                continue;
+            }
+            // 配平扫描：depth 计数, 字符串内不参与
+            int depth = 0;
+            boolean inStr = false;
+            int j = i;
+            while (j < n) {
+                char ch = json.charAt(j);
+                if (inStr) {
+                    if (ch == '\\') {
+                        j += 2;
+                        continue;
+                    }
+                    if (ch == '"') inStr = false;
+                } else if (ch == '"') {
+                    inStr = true;
+                } else if (ch == '{') {
+                    depth++;
+                } else if (ch == '}') {
+                    depth--;
+                    if (depth == 0) break;
+                }
+                j++;
+            }
+            if (j >= n) break;                       // 截断的 JSON，到此为止
+            String body = json.substring(i + 1, j);  // 不含首尾花括号
+            i = j + 1;
             // pageBean 等容器对象没有 picUrl，靠它过滤
             String pic = pick(body, "picUrl");
             if (pic.isEmpty()) continue;
