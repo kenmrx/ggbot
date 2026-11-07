@@ -468,11 +468,11 @@ public class MainActivity extends Activity {
             cell.setOrientation(LinearLayout.VERTICAL);
             TextView val = ui.tv("—", 20f, FG, true);
             meterVals[isBlock ? 0 : 1][i] = val;
-            val.setGravity(Gravity.END);
+            val.setGravity(Gravity.CENTER);
             cell.addView(val, new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             TextView lab = ui.tv(labels[i], 12.5f, MUTED, false);
-            lab.setGravity(Gravity.END);
+            lab.setGravity(Gravity.CENTER);
             cell.addView(lab, new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             nums.addView(cell, new LinearLayout.LayoutParams(0,

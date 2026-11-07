@@ -154,8 +154,16 @@ public class SettingsActivity extends Activity {
         bottom.setGravity(Gravity.CENTER_VERTICAL);
         bottom.setPadding(0, dp(16), 0, 0);
 
+        LinearLayout footCol = new LinearLayout(this);
+        footCol.setOrientation(LinearLayout.VERTICAL);
+        footCol.setGravity(Gravity.CENTER_HORIZONTAL);
+        footCol.addView(babySlogan(), new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         TextView foot = footNote();
-        bottom.addView(foot, new LinearLayout.LayoutParams(
+        foot.setGravity(Gravity.CENTER);
+        footCol.addView(foot, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        bottom.addView(footCol, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         // 右下角小号关于：比胶囊小一档，不抢视觉
@@ -1440,6 +1448,24 @@ public class SettingsActivity extends Activity {
         } catch (Exception e) {
             toast("没有可用的文件选择器");
         }
+    }
+
+    /** 底部公益标语：版本号上方一行小字。 */
+    private TextView babySlogan() {
+        TextView t = new TextView(this);
+        t.setText("♥ 让爱回家 · 愿每个孩子都在父母身边");
+        t.setTextSize(11f);
+        t.setTextColor(ACCENT);
+        t.setGravity(Gravity.CENTER);
+        t.setPadding(0, dp(14), 0, 0);
+        t.setAlpha(0.85f);
+        t.setClickable(true);
+        t.setFocusable(true);
+        t.setOnClickListener(v -> {
+            v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
+            showBabyHome();
+        });
+        return t;
     }
 
     /** 设置页底部脚注：只放版本号。 */
