@@ -1,0 +1,14 @@
+GGBot
+Copyright 2026 GGBot Authors
+
+This product includes software developed as part of the GGBot project.
+
+The "宝宝回家" (Baby Home) feature displays publicly available data from
+the Ministry of Civil Affairs of the People's Republic of China
+(全国救助寻亲网). That data belongs to its respective publishers;
+this application only provides a viewing entry point and does not
+store or redistribute it.
+
+Ad filter rule data (assets/blocklist.txt) is derived from publicly
+available community blocklists; follow the distribution conventions
+of their original sources.
