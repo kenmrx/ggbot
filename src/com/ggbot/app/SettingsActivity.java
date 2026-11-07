@@ -1930,7 +1930,9 @@ public class SettingsActivity extends Activity {
         scroll.addView(box);
 
         TextView head = new TextView(this);
-        head.setText("民政部全国救助寻亲网 · 最新 " + r.children.size() + " 条\n照片实时加载，不本地缓存");
+        head.setText("民政部全国救助寻亲网 · 最新 " + r.children.size() + " 条"
+                + "\n这些孩子正在各地救助站等待家人 · 发现地=被救助地点，不等于走失地点"
+                + "\n认出孩子请拨打 110 或联系记录上的救助站 · 照片实时加载不本地缓存");
         head.setTextSize(11.5f);
         head.setTextColor(MUTED);
         head.setPadding(dp(10), dp(8), dp(10), dp(8));
