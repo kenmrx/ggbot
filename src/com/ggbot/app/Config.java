@@ -349,6 +349,20 @@ public final class Config {
         sp(c).edit().putLong("feedChecked", v).apply();
     }
 
+    /* ---------- 宝宝回家 ---------- */
+
+    /** 省份过滤记忆（findRescuePlace 前缀）；null=全部省份。 */
+    public static String babyProvince(Context c) {
+        return sp(c).getString("babyProvince", null);
+    }
+
+    public static void setBabyProvince(Context c, String v) {
+        SharedPreferences.Editor e = sp(c).edit();
+        if (v == null) e.remove("babyProvince");
+        else e.putString("babyProvince", v);
+        e.apply();
+    }
+
     /* ---------- 内容重写 ---------- */
 
     public static boolean rewrite(Context c) {

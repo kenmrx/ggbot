@@ -38,6 +38,15 @@ public final class BabyHome {
                     + "?personType=0&releaseTime=&pageNum=1&pageSize=20";
     /** 照片前缀。 */
     public static final String PHOTO_BASE = "https://www.mca.gov.cn/lljz/lljz_files/";
+    /** 全国省级行政区（findRescuePlace 以这些名称开头）。 */
+    public static final String[] PROVINCES = {
+            "北京", "天津", "河北", "山西", "内蒙古", "辽宁", "吉林", "黑龙江",
+            "上海", "江苏", "浙江", "安徽", "福建", "江西", "山东", "河南",
+            "湖北", "湖南", "广东", "广西", "海南", "重庆", "四川", "贵州",
+            "云南", "西藏", "陕西", "甘肃", "青海", "宁夏", "新疆",
+            "香港", "澳门", "台湾",
+    };
+
     /** 官网入口（lljz 壳页，公网直达）。 */
     public static final String OFFICIAL_SITE = "https://www.mca.gov.cn/lljz/";
     public static final String POLICE_PHONE = "110";
@@ -91,9 +100,28 @@ public final class BabyHome {
 
     /** 同步拉取；必须在后台线程调用。失败原因镜像到 Diag（logcat 可查）。 */
     public static Result fetch() {
+        return fetch(1, null);
+    }
+
+    /**
+     * 带页码与省份过滤的拉取。
+     *
+     * @param pageNum  页码（刷新翻页用）
+     * @param province 省份名（如 "河南"）；null=不过滤。在客户端按
+     *                 findRescuePlace 前缀匹配——服务端无地域参数。
+     */
+    public static Result fetch(int pageNum, String province) {
         try {
-            List<Child> list = fetchList();
-            Diag.push("宝宝回家：拉取到 " + list.size() + " 条", "info");
+            List<Child> list = fetchList(pageNum);
+            if (province != null && !province.isEmpty()) {
+                List<Child> local = new ArrayList<>();
+                for (Child c : list) {
+                    if (c.place != null && c.place.startsWith(province)) local.add(c);
+                }
+                list = local;
+            }
+            Diag.push("宝宝回家：第" + pageNum + "页拉到 " + list.size() + " 条"
+                    + (province == null ? "" : "（" + province + "）"), "info");
             return new Result(list, null);
         } catch (Exception e) {
             String why = e.getClass().getSimpleName()
@@ -103,15 +131,15 @@ public final class BabyHome {
         }
     }
 
-    private static List<Child> fetchList() throws Exception {
+    private static List<Child> fetchList(int pageNum) throws Exception {
         // 儿童(personType=0)为主；异常时回落全量再过滤未成年
         try {
-            List<Child> r = fetchOne(LIST_URL);
+            List<Child> r = fetchOne(LIST_URL.replace("pageNum=1", "pageNum=" + pageNum));
             if (!r.isEmpty()) return r;
         } catch (Exception ignored) {
         }
         List<Child> all = fetchOne("https://www.mca.gov.cn/lljz/jmgc-relief-seeking/familySeekers"
-                + "/querySeekingList?personType=&releaseTime=&pageNum=1&pageSize=20");
+                + "/querySeekingList?personType=&releaseTime=&pageNum=" + pageNum + "&pageSize=20");
         List<Child> kids = new ArrayList<>();
         for (Child c : all) {
             if (isUnderAge(c.age)) kids.add(c);

@@ -1886,20 +1886,45 @@ public class SettingsActivity extends Activity {
                 .show();
     }
 
-    /** 「宝宝回家」弹窗：实时拉取民政寻亲数据，拉不到回落官方渠道。 */
+    /** 「宝宝回家」会话状态：刷新=下一页（循环），省份过滤记忆在 Config。 */
+    private int babyPage = 1;
+    private String babyProvince;
+    private boolean babyAutoPaged;
+
     private void showBabyHome() {
+        showBabyHome(1);
+    }
+
+    private void showBabyHome(int page) {
+        babyPage = page;
+        babyProvince = Config.babyProvince(this);
         android.app.AlertDialog dlg = Ui.dialog(this)
                 .setTitle("宝宝回家")
-                .setMessage("正在从全国救助寻亲网拉取…")
+                .setMessage(page == 1 ? "正在从全国救助寻亲网拉取…"
+                        : "正在拉取第 " + page + " 批…")
                 .setNegativeButton("关闭", null)
                 .show();
         final android.app.AlertDialog[] holder = {dlg};
+        final int fPage = page;
+        final String fProv = babyProvince;
         new Thread(() -> {
-            final BabyHome.Result r = BabyHome.fetch();
+            BabyHome.Result r = BabyHome.fetch(fPage, fProv);
+            // 省份过滤后可能为空：翻下一页再试一次，仍空才回落提示
+            if (r.children.isEmpty() && fProv != null && !fProv.isEmpty()) {
+                BabyHome.Result all = BabyHome.fetch(fPage, null);
+                final BabyHome.Result merged = new BabyHome.Result(all.children, all.error);
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    holder[0].dismiss();
+                    showBabyHomeResult(merged);
+                });
+                return;
+            }
+            final BabyHome.Result fr = r;
             runOnUiThread(() -> {
                 if (isFinishing() || isDestroyed()) return;
                 holder[0].dismiss();
-                showBabyHomeResult(r);
+                showBabyHomeResult(fr);
             });
         }, "ggbot-babyhome").start();
     }
@@ -1945,9 +1970,25 @@ public class SettingsActivity extends Activity {
         new android.app.AlertDialog.Builder(this, dialogThemeId())
                 .setTitle("宝宝回家 · 团圆行动")
                 .setView(scroll)
-                .setPositiveButton("刷新", (d, w) -> showBabyHome())
-                .setNeutralButton("打开官网", (d, w) -> openBabySite())
+                .setPositiveButton("换一批", (d, w) -> showBabyHome(babyPage >= 6 ? 1 : babyPage + 1))
+                .setNeutralButton("选省份", (d, w) -> pickBabyProvince())
                 .setNegativeButton("关闭", null)
+                .show();
+    }
+
+    /** 省份选择：34 省级行政区单选，记忆到 Config；「全部」清空过滤。 */
+    private void pickBabyProvince() {
+        String[] items = new String[BabyHome.PROVINCES.length + 1];
+        items[0] = "全部省份";
+        System.arraycopy(BabyHome.PROVINCES, 0, items, 1, BabyHome.PROVINCES.length);
+        new android.app.AlertDialog.Builder(this, dialogThemeId())
+                .setTitle("按发现地筛选省份（当前：" + (babyProvince == null ? "全部" : babyProvince) + "）")
+                .setItems(items, (d, w) -> {
+                    String sel = w == 0 ? null : items[w];
+                    Config.setBabyProvince(this, sel);
+                    showBabyHome(1);
+                })
+                .setNegativeButton("取消", null)
                 .show();
     }
 
