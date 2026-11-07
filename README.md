@@ -1,5 +1,9 @@
 # GGBot
 
+[![Download APK](https://img.shields.io/badge/下载-最新APK-35D07F?logo=android&logoColor=white&style=for-the-badge)](https://github.com/kenmrx/ggbot/releases/latest/download/GGBot.apk)
+[![Release](https://img.shields.io/badge/Release-v1.9.3-blue?style=for-the-badge)](https://github.com/kenmrx/ggbot/releases/latest)
+[![License](https://img.shields.io/badge/License-Apache--2.0-green?style=for-the-badge)](LICENSE)
+
 GGBot 是一款 Android 本机 VPN 型广告过滤应用：基于 `VpnService` 建立本地 TUN 隧道，
 在用户态完成 **DNS 拦截 + TCP 转发 + HTTPS MITM 解密 + 规则引擎匹配**。
 
@@ -15,6 +19,14 @@ GGBot 是一款 Android 本机 VPN 型广告过滤应用：基于 `VpnService` �
 - **快速设置磁贴**、开机自启、tun 自愈守卫、Shizuku 无障碍写回（跳过类规则）
 - **宝宝回家（公益）**：接民政部全国救助寻亲网公开数据，按省份筛选在站儿童，照片实时加载不本地缓存
 - **赞赏码**随 APK 签名分发并做防拆包校验
+
+## 安装（直接下载即用）
+
+👉 **[点此下载最新 APK](https://github.com/kenmrx/ggbot/releases/latest/download/GGBot.apk)**
+（约 1.2 MB，Android 7.0+，无需 Root；安装时允许"未知来源"即可）
+
+> 历史版本见 [Releases](https://github.com/kenmrx/ggbot/releases)。
+> 每次发版 APK 与 tag 绑定，SHA-256 见 Release 说明，**请只从本仓库下载**。
 
 ## 系统要求
 
