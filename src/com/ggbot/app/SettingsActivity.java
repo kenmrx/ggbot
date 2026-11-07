@@ -436,9 +436,22 @@ public class SettingsActivity extends Activity {
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(12), 0, 0, 0);
         box.addView(tv("设置", 19f, FG, true));
-        box.addView(tv("模式 · 开关 · 电池", 11.5f, MUTED, false));
         bar.addView(box, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        // 右上角公益入口：宝宝回家——民政部救助寻亲数据 + 官方渠道，可刷新
+        TextView baby = tv("宝宝回家", 13f, FG, false);
+        baby.setGravity(Gravity.CENTER);
+        baby.setPadding(dp(10), 0, dp(10), 0);
+        baby.setBackground(ui.rippleCard(CARD2, 12, BORDER));
+        baby.setClickable(true);
+        baby.setFocusable(true);
+        baby.setOnClickListener(v -> {
+            v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
+            showBabyHome();
+        });
+        bar.addView(baby, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)));
 
         // 右上角赞赏入口：收款码随 APK 签名分发，点按弹本地二维码
         TextView donate = tv("赞赏", 14f, FG, false);
@@ -1869,6 +1882,65 @@ public class SettingsActivity extends Activity {
                     } catch (Exception ignored) {
                     }
                 })
+                .show();
+    }
+
+    /** 「宝宝回家」弹窗：实时拉取民政寻亲数据，拉不到回落官方渠道。 */
+    private void showBabyHome() {
+        android.app.AlertDialog dlg = Ui.dialog(this)
+                .setTitle("宝宝回家")
+                .setMessage("正在从全国救助寻亲网拉取…")
+                .setNegativeButton("关闭", null)
+                .show();
+        final android.app.AlertDialog[] holder = {dlg};
+        new Thread(() -> {
+            final BabyHome.Result r = BabyHome.fetch();
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                holder[0].dismiss();
+                showBabyHomeResult(r);
+            });
+        }, "ggbot-babyhome").start();
+    }
+
+    private void showBabyHomeResult(BabyHome.Result r) {
+        StringBuilder sb = new StringBuilder(1024);
+        if (r.children.isEmpty()) {
+            sb.append("实时数据暂时拉取不到（接口对部分网络不开放）。\n\n")
+                    .append("寻亲认亲请走官方渠道：\n")
+                    .append("· 全国救助寻亲网（民政部）：\n  ")
+                    .append(BabyHome.OFFICIAL_SITE).append("\n")
+                    .append("· 发现疑似走失儿童：拨打 110 或全国打拐热线\n")
+                    .append("· 宝贝回家志愿者协会：baobeihuijia.com\n\n")
+                    .append("每次打开都会重新尝试实时数据。");
+        } else {
+            sb.append("来自民政部全国救助寻亲网 · 共 ").append(r.children.size()).append(" 条\n\n");
+            for (int i = 0; i < r.children.size() && i < 10; i++) {
+                BabyHome.Child c = r.children.get(i);
+                sb.append("· ").append(c.name.isEmpty() ? "(信息待完善)" : c.name);
+                if (!c.gender.isEmpty()) sb.append(" · ").append(c.gender);
+                if (!c.age.isEmpty()) sb.append(" · ").append(c.age);
+                if (!c.place.isEmpty()) sb.append("\n  走失地点：").append(c.place);
+                if (!c.date.isEmpty()) sb.append("\n  日期：").append(c.date);
+                if (!c.status.isEmpty()) sb.append("\n  状态：").append(c.status);
+                sb.append("\n\n");
+            }
+            sb.append("照片与完整信息请在官网查看（应用内不二次缓存儿童数据）。");
+        }
+        Ui.dialog(this)
+                .setTitle("宝宝回家 · 团圆行动")
+                .setMessage(sb.toString())
+                .setPositiveButton("刷新", (d, w) -> showBabyHome())
+                .setNeutralButton("打开官网", (d, w) -> {
+                    try {
+                        startActivity(new android.content.Intent(
+                                android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse(BabyHome.OFFICIAL_SITE)));
+                    } catch (Exception e) {
+                        toast("没有可用的浏览器");
+                    }
+                })
+                .setNegativeButton("关闭", null)
                 .show();
     }
 
