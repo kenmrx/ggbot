@@ -109,6 +109,10 @@ public class AdvTest {
                         || true); // 该路径含 /luckycat/ 端点会被拦——金币任务的 ad_free 权限查询同属激励域，拦截是预期
         check("普通新闻页放行",
                 !Decision.match(new Decision.Sets(), "www.example.com", "/article/123.html").blocked);
+        check("根域兜底: 未枚举子域 lf3-sf-immersive-plugin.zijieapi.com 命中",
+                Decision.match(new Decision.Sets(), "lf3-sf-immersive-plugin.zijieapi.com", "/").blocked);
+        check("根域兜底: 随机子域 anything-random.oceanengine.com 命中",
+                Decision.match(new Decision.Sets(), "anything-random.oceanengine.com", "/").blocked);
     }
 
     /* ---------------- 报文构造 ---------------- */
