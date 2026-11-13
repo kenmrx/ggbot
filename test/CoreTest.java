@@ -126,7 +126,7 @@ public class CoreTest {
         long ms = (System.nanoTime() - t0) / 1000000;
         System.out.println("  规则库 " + total + " 行 -> 有效 " + lib.size()
                 + " 条，载入 " + ms + " ms");
-        check("规则库行数与预期一致", total == 54619);
+        check("规则库行数与预期一致", total == 54675);
         check("全部行均为合法域名", dirty.isEmpty());
         check("含 doubleclick 域名", lib.contains("doubleclick.net"));
 

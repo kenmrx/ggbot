@@ -57,6 +57,11 @@ public final class Decision {
             "rubiconproject.com", "pubmatic.com", "casalemedia.com",
             "tanx.com", "alimama.com", "ipinyou.com", "mediav.com",
             "growingio.com", "talkingdata.com", "sensorsdata.cn",
+            // 红果/抖音专项（2026-11-13 逆向 com.phoenix.read 7.4.5.32 与
+            // com.ss.android.ugc.aweme 41.1.0 静态产物）：字节系广告主域，
+            // 按标签边界匹配，.zijieapi.com 整域全部子域一次拦住
+            "zijieapi.com", "csjdeveloper.com", "oceanengine.com",
+            "zlink.ugsdk.cn",
     };
 
     /** 路径包含即命中：这些片段本身就是广告服务的独有端点。 */
@@ -68,6 +73,11 @@ public final class Decision {
             // 会被误拦；广告域本身已由 HOST_HINTS 按标签边界拦住，路径层不必重复。
             // /collect 也不能放：GA 端点是精确的 /collect 结尾，contains 会误伤 /collector。
             "/analytics.js",
+            // 字节系广告/激励端点（逆向自两 App 的 URL 常量串）：
+            //   ad.zijieapi.com/api/ad/v1/* 广告反馈与激励
+            //   /luckycat/ 番茄系金币任务（激励视频的宿主协议）
+            //   /falcon/douyin_falcon/report/ 抖音 H5 投放上报
+            "/api/ad/v1/", "/luckycat/", "/douyin_falcon/report/",
     };
 
     /** 路径段精确等于这些词才命中：/ad/ 中招，/download/ 不会被误伤。 */

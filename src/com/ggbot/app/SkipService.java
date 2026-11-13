@@ -262,22 +262,119 @@ public class SkipService extends AccessibilityService {
     }
 
     private boolean clickSkip(AccessibilityNodeInfo root, String pkg) {
+        // 第 1 路：viewId 形态（无文字的小图 ×，马克水印相机的广告关闭钮就是这种，
+        // 文本匹配永远接不住）。viewId 形态天然指向广告控件，误伤面极小。
+        CharSequence viewId = null;
+        try {
+            viewId = root.getViewIdResourceName();
+        } catch (Throwable ignored) {
+        }
+        if (viewId != null && SkipMatcher.isAdCloseId(viewId)
+                && clickNodeOrAncestor(root, pkg)) {
+            return true;
+        }
+        // 逐节点扫描 viewId（ViewIdResourceName 是节点级的，root 的那一个只够「整树同 id」场景）
+        if (scanViewIds(root, pkg)) return true;
+        // 第 2.5 路：跳过钮按 id 命中（抖音/红果的开屏跳过控件常无 close 字样，
+        // 只有 splash_ad_skip / tt_skip 之类 id；文本与关闭钮两路都接不住它们）
+        if (scanSkipIds(root, pkg)) return true;
+        // 第 2 路：文本形态（跳过 / Skip …）
         for (String key : new String[]{"跳过", "Skip", "skip"}) {
             for (AccessibilityNodeInfo n : root.findAccessibilityNodeInfosByText(key)) {
                 CharSequence text = n.getText() != null ? n.getText() : n.getContentDescription();
                 if (!SkipMatcher.isSkipText(text)) continue;
-                AccessibilityNodeInfo target = n;
-                int up = 0;
-                while (target != null && !target.isClickable() && up++ < 6) {
-                    target = target.getParent();
-                }
-                if (target != null && target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
-                    Diag.push("已自动跳过开屏 · " + pkg, "skip");
-                    return true;
-                }
+                if (clickNodeOrAncestor(n, pkg)) return true;
             }
         }
         return false;
+    }
+
+    /** 广度优先扫描整棵树，命中广告关闭 id 就点。树有界（单窗口），深度 20、节点 500 封顶。 */
+    private boolean scanViewIds(AccessibilityNodeInfo root, String pkg) {
+        java.util.ArrayDeque<AccessibilityNodeInfo> queue = new java.util.ArrayDeque<>();
+        queue.add(root);
+        int seen = 0;
+        while (!queue.isEmpty() && seen++ < 500) {
+            AccessibilityNodeInfo cur = queue.poll();
+            if (cur == null) continue;
+            CharSequence vid = null;
+            try {
+                vid = cur.getViewIdResourceName();
+            } catch (Throwable ignored) {
+            }
+            if (vid != null && SkipMatcher.isAdCloseId(vid) && clickNodeOrAncestor(cur, pkg)) {
+                return true;
+            }
+            if (queue.size() + seen < 600) {
+                for (int i = 0; i < cur.getChildCount(); i++) queue.add(cur.getChild(i));
+            }
+        }
+        return false;
+    }
+
+    /** 跳过钮按 id 的第二形态扫描：ad/splash/tt_ 语境 + skip/count_down 组合。
+     *  与 scanViewIds 同一栈路，复用同一个 500 节点上限，不额外增加事件成本。 */
+    private boolean scanSkipIds(AccessibilityNodeInfo root, String pkg) {
+        java.util.ArrayDeque<AccessibilityNodeInfo> queue = new java.util.ArrayDeque<>();
+        queue.add(root);
+        int seen = 0;
+        while (!queue.isEmpty() && seen++ < 500) {
+            AccessibilityNodeInfo cur = queue.poll();
+            if (cur == null) continue;
+            CharSequence vid = null;
+            try {
+                vid = cur.getViewIdResourceName();
+            } catch (Throwable ignored) {
+            }
+            if (vid != null && SkipMatcher.isAdSkipId(vid) && clickNodeOrAncestor(cur, pkg)) {
+                return true;
+            }
+            if (queue.size() + seen < 600) {
+                for (int i = 0; i < cur.getChildCount(); i++) queue.add(cur.getChild(i));
+            }
+        }
+        return false;
+    }
+
+    /** 点掉节点；节点本身不可点则向上找可点祖先（最多 6 层）。
+     *  performAction 返回 true 不代表真点上了——荣耀/部分 ROM 会静默拦截
+     *  无障碍对广告控件的模拟点击。所以 ACTION_CLICK 失败或点了没反应时，
+     *  兜底走 dispatchGesture 按 bounds 中心真实点一下（canPerformGestures 已声明）。 */
+    private boolean clickNodeOrAncestor(AccessibilityNodeInfo n, String pkg) {
+        AccessibilityNodeInfo target = n;
+        int up = 0;
+        while (target != null && !target.isClickable() && up++ < 6) {
+            target = target.getParent();
+        }
+        if (target == null) return false;
+        if (target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+            Diag.push("已自动跳过开屏 · " + pkg, "skip");
+            return true;
+        }
+        return gestureClick(target, pkg);
+    }
+
+    /** 手势兜底：按节点 bounds 中心发一次点按。路径独立于 performAction，
+     *  对 ROM 拦截模拟点击的场景有效。失败仅留痕，不影响后续扫描。 */
+    private boolean gestureClick(AccessibilityNodeInfo n, String pkg) {
+        try {
+            android.graphics.Rect r = new android.graphics.Rect();
+            n.getBoundsInScreen(r);
+            if (r.isEmpty()) return false;
+            float x = r.exactCenterX(), y = r.exactCenterY();
+            android.accessibilityservice.GestureDescription.Builder b =
+                    new android.accessibilityservice.GestureDescription.Builder();
+            android.graphics.Path path = new android.graphics.Path();
+            path.moveTo(x, y);
+            b.addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(
+                    path, 0, 40));
+            boolean ok = dispatchGesture(b.build(), null, null);
+            Diag.push(ok ? "模拟点击被拦，已改手势点按 · " + pkg
+                         : "手势点按提交失败 · " + pkg, ok ? "skip" : "warn");
+            return ok;
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     @Override

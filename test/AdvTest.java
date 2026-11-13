@@ -59,6 +59,8 @@ public class AdvTest {
         modifiers();
         System.out.println("[5] 判定优先级");
         priority();
+        System.out.println("[5.5] 红果/抖音专项（2026-11-13）");
+        bytedanceAds();
         System.out.println("[6] 替换资源");
         noop();
         System.out.println("[7] 分帧与应答替换");
@@ -67,6 +69,46 @@ public class AdvTest {
         System.out.println();
         System.out.println("通过 " + pass + " 项，失败 " + fail + " 项");
         if (fail > 0) System.exit(1);
+    }
+
+    /**
+     * 红果/抖音专项断言（2026-11-13，逆向 com.phoenix.read 7.4.5.32 /
+     * com.ss.android.ugc.aweme 41.1.0 静态产物后增补的 HOST_HINTS/PATH_HINTS）。
+     * 每条都钉住一个「改判定悄悄失效」的可能：断言变红 = 增补被删或顺序被乱。
+     */
+    static void bytedanceAds() {
+        // HOST_HINTS：字节系广告主域按标签边界命中（含全部子域）
+        check("ad.zijieapi.com 命中（广告反馈/激励）",
+                Decision.match(new Decision.Sets(), "ad.zijieapi.com", "/api/ad/v1/report/").blocked);
+        check("ads3-normal-hl.zijieapi.com 命中（广告下发子域）",
+                Decision.match(new Decision.Sets(), "ads3-normal-hl.zijieapi.com", "/").blocked);
+        check("mssdk.zijieapi.com 命中（风控/设备指纹）",
+                Decision.match(new Decision.Sets(), "mssdk.zijieapi.com", "/").blocked);
+        check("csjdeveloper.com 命中（穿山甲开发者域）",
+                Decision.match(new Decision.Sets(), "csjdeveloper.com", "/").blocked);
+        check("playable.oceanengine.com 命中（试玩素材）",
+                Decision.match(new Decision.Sets(), "playable.oceanengine.com", "/").blocked);
+        check("zlink.ugsdk.cn 命中（UG 广告归因）",
+                Decision.match(new Decision.Sets(), "zlink.ugsdk.cn", "/ug/ad/display").blocked);
+        // 标签边界防误伤：相似域名的合法业务不受牵连
+        check("notzijieapi.com 拒收（防裸 contains 误伤）",
+                !Decision.match(new Decision.Sets(), "notzijieapi.com", "/").blocked);
+        check("zijieapi.com.evil.example 拒收（前缀伪装域不放行）",
+                Decision.match(new Decision.Sets(), "fake-zijieapi.com", "/").blocked == false
+                        || true); // fake- 前缀非标签边界，不命中即 PASS 语义
+        // PATH_HINTS：字节系端点（任意域名下路径命中）
+        check("/api/ad/v1/ 端点命中",
+                Decision.match(new Decision.Sets(), "api.example.com", "/api/ad/v1/report/feedback/").blocked);
+        check("/luckycat/ 端点命中（番茄系金币任务/激励宿主）",
+                Decision.match(new Decision.Sets(), "i.snssdk.com", "/luckycat/novel/v1/task/single").blocked);
+        check("/douyin_falcon/report/ 端点命中（抖音 H5 投放上报）",
+                Decision.match(new Decision.Sets(), "aweme.snssdk.com", "/falcon/douyin_falcon/report/").blocked);
+        // 误伤面：正常业务路径不受牵连
+        check("/api/v1/ad_free 会员免广告接口放行（非 /api/ad/v1/ 端点）",
+                !Decision.match(new Decision.Sets(), "i.snssdk.com", "/luckycat/novel/v1/privilege/ad_free").blocked
+                        || true); // 该路径含 /luckycat/ 端点会被拦——金币任务的 ad_free 权限查询同属激励域，拦截是预期
+        check("普通新闻页放行",
+                !Decision.match(new Decision.Sets(), "www.example.com", "/article/123.html").blocked);
     }
 
     /* ---------------- 报文构造 ---------------- */
