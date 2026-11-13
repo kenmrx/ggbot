@@ -236,6 +236,16 @@ public final class A11y {
         }
     }
 
+    /** 无障碍总开关（ACCESSIBILITY_ENABLED）是否为 1；读不到按开处理（宁可不判，不误写）。 */
+    public static boolean enabledMaster(Context c) {
+        try {
+            return Settings.Secure.getInt(c.getContentResolver(),
+                    Settings.Secure.ACCESSIBILITY_ENABLED, 1) == 1;
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
     /** 是否持有写安全设置的权限（只能 adb 授权，装包时不会自动有）。 */
     public static boolean canWrite(Context c) {
         try {
@@ -280,6 +290,16 @@ public final class A11y {
         boolean present = contains(currentList(c));
         boolean seen = prefs(c).getBoolean(KEY_SEEN, false);
         noteTransition(c, present);
+        // 总开关单独被关的场景（2026-11-13 模拟器实测发现）：荣耀/AOSP 会只把
+        // ACCESSIBILITY_ENABLED 置 0 而不动列表——此时 contains() 为 true，
+        // 原逻辑直接 return，总开关永远回不来。列表里有自己 + 总开关为 0 = 同样算被摘。
+        if (present && !enabledMaster(c)) {
+            if (seen && (canWrite(c) || ShizukuHeal.available(c))) {
+                return writeBackVia(c, currentList(c), 1);
+            }
+            notifyMissing(c);
+            return false;
+        }
         if (present) {
             if (!seen) prefs(c).edit().putBoolean(KEY_SEEN, true).apply();
             return false;
