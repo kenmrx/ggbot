@@ -234,6 +234,12 @@ public class SkipService extends AccessibilityService {
         // 30 秒无事件：STALE_EVENT_MS 是 20s（A11y 巡检用），这里多给 10s 容忍，
         // 避免与巡检判定抢跑——巡检判定僵尸后走 rebind，走不通才轮到这条。
         if (s.isAlive(30_000L)) return false;
+        // 关键门槛（2026-11-13 真机误杀修复）：必须「曾经收到过真实事件」才允许自杀。
+        // 手机停在系统设置页/桌面时服务本来就没有事件（counter=0），那不是被挂起，
+        // 是没有广告场景——这种情况下自杀只会造成「绑上→自杀→写回→再绑」的死循环
+        // （荣耀 BRT-AN00 实测每 60 秒一次，settings 反复清空）。
+        // 真被挂起的场景（用户刷抖音/红果时被冻结）counter 必然 > 0。
+        if (eventCounter == 0) return false;
         try {
             Diag.push("无障碍被荣耀挂起（事件停 30s+），自杀重置 + 全屏引导重开", "warn");
             A11y.notifyMissing(c);

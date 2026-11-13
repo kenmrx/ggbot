@@ -349,6 +349,9 @@ public final class A11y {
         // 屏幕灭着时的安静是正常的，不判
         if (!screenOn(c)) return false;
         if (!looksStale(true, true, true, SkipService.isAlive(STALE_EVENT_MS))) return false;
+        // 从未收到过事件的服务不算僵尸：停在设置页/桌面时没有广告场景，安静是常态
+        // （2026-11-13 荣耀真机误判修复：这层缺了会引发 rebind/自杀死循环）
+        if (SkipService.getEventCounter() == 0) return false;
 
         long now = System.currentTimeMillis();
         if (now - lastStaleAt < STALE_COOLDOWN_MS) return false;
