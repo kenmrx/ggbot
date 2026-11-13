@@ -213,6 +213,38 @@ public class SkipService extends AccessibilityService {
     }
 
     /**
+     * 荣耀 MagicOS 僵尸绑定的自救通道（2026-11-13，零权限自愈升级）。
+     *
+     * 场景：名单里还在、屏幕亮着、但事件流断了 30 秒以上——荣耀的耗电管理
+     * 会把服务「挂起」而不是摘掉，界面显示已启用、实际永远不回调。
+     * 原处置走 rebind（要 WRITE_SECURE_SETTINGS 或 Shizuku）；这条是零权限路径：
+     *   disableSelf() 是官方 API，等价用户关掉——系统立刻回收僵尸连接，
+     *   随后 FSI 通知把用户全屏拉到详情页拨一下（notifyMissing 十分钟限一条）。
+     * 为什么不担心「关了没人开」：被挂起的服务本来就永远不回调，留着只会
+     * 让用户以为在保护；关掉+弹页至少把选择权还给用户。
+     *
+     * 门槛（四条全过才自杀）：已连接、屏幕亮、名单还在（本服务才会被这样挂起）、
+     * 事件计数 30 秒纹丝不动。由守卫线程巡检时调用，不在事件回调里调（重入）。
+     */
+    public static boolean suicideIfZombie(android.content.Context c) {
+        SkipService s = INSTANCE;
+        if (s == null) return false;
+        if (!s.isConnected()) return false;
+        if (!A11y.screenOn(c)) return false;
+        // 30 秒无事件：STALE_EVENT_MS 是 20s（A11y 巡检用），这里多给 10s 容忍，
+        // 避免与巡检判定抢跑——巡检判定僵尸后走 rebind，走不通才轮到这条。
+        if (s.isAlive(30_000L)) return false;
+        try {
+            Diag.push("无障碍被荣耀挂起（事件停 30s+），自杀重置 + 全屏引导重开", "warn");
+            A11y.notifyMissing(c);
+            s.disableSelf();
+            return true;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /**
      * 这是保活的中心。
      *
      * 前三件事（计数、时间戳、notifyAll）在所有事件类型上无条件执行——

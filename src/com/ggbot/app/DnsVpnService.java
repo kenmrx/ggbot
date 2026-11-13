@@ -983,6 +983,9 @@ public class DnsVpnService extends VpnService implements TcpProxy.Sink {
                 A11y.selfHeal(DnsVpnService.this);
                 // 另一条路：名单里还在、事件却断了（ContentObserver 看不见的僵尸绑定）
                 A11y.healStale(DnsVpnService.this);
+                // 零权限兜底：healStale 要写权限或 Shizuku；都没有时荣耀的「挂起型僵尸」
+                // 用 disableSelf + FSI 引导重开（2026-11-13 荣耀 BRT-AN00 专项）
+                SkipService.suicideIfZombie(DnsVpnService.this);
                 if (!TunGuard.shouldRestart(true, false, TunGuard.anyTunUp())) continue;
                 Diag.push("tun 网卡不在了，原地重建引擎", "warn");
                 rebuildTun();

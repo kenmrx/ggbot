@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- 零权限自愈主通道：无障碍被摘时全屏弹出详情页引导（API 34+ 需声明，前台服务可发） -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <!-- Shizuku:声明这个权限 server 才会把 binder 递给我们(进程观察者按
          requestedPermissions 过滤,缺声明则永远收不到);用户点「始终允许」后
          server 会以 shell 身份 pm grant 授权它。 -->

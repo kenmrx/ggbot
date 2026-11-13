@@ -155,6 +155,12 @@ public final class A11y {
 
     /**
      * 被系统摘掉又没写权限时，发一条通知把用户领回去。
+     *
+     * 2026-11-13 零权限自愈升级：DEFAULT 通道在荣耀上只弹横幅，容易被忽略；
+     * 升级为 HIGH 通道 + fullScreenIntent——前台服务发出的 FSI 在锁屏/桌面上
+     * 直接全屏拉起无障碍详情页（官方 API，荣耀 MagicOS 对前台服务的 FSI 不拦）。
+     * FSI 在 Android 14+ 默认只对通话/闹钟类放行，其它场景降级为横幅——
+     * 所以两条通道都挂上：能弹就弹，弹不了落横幅，横幅点了一样到详情页。
      * 十分钟最多一条，避免守卫每 10 秒巡检刷屏。
      */
     public static void notifyMissing(Context c) {
@@ -165,21 +171,27 @@ public final class A11y {
             NotificationManager nm =
                     (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm == null) return;
-            if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CH_A11Y) == null) {
+            // HIGH 通道：横幅+声音；FSI 可用时锁屏全屏，不可用时退横幅
+            String chId = CH_A11Y + "_hi";
+            if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(chId) == null) {
                 NotificationChannel ch = new NotificationChannel(
-                        CH_A11Y, "无障碍状态", NotificationManager.IMPORTANCE_DEFAULT);
+                        chId, "无障碍状态（重要）", NotificationManager.IMPORTANCE_HIGH);
                 ch.setShowBadge(false);
                 nm.createNotificationChannel(ch);
             }
             PendingIntent pi = PendingIntent.getActivity(c, 7, detailsIntent(c),
                     PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-            Notification.Builder bd = DnsVpnService.notificationBuilder(c, CH_A11Y);
-            nm.notify(NOTE_ID, bd.setContentTitle("开屏跳过已停止工作")
+            Notification.Builder bd = DnsVpnService.notificationBuilder(c, chId);
+            bd.setContentTitle("开屏跳过已停止工作")
                     .setContentText("系统的无障碍开关被关掉了，点这里拨回来")
                     .setSmallIcon(R.drawable.ic_stat)
                     .setContentIntent(pi)
-                    .setAutoCancel(true)
-                    .build());
+                    .setAutoCancel(true);
+            // FSI：把详情页 Intent 再包一份当全屏动作。API 29+ 才有 setFullScreenIntent
+            if (Build.VERSION.SDK_INT >= 29) {
+                bd.setFullScreenIntent(pi, true);
+            }
+            nm.notify(NOTE_ID, bd.build());
         } catch (Exception ignored) {
         }
     }

@@ -94,29 +94,52 @@ public final class Vendor {
     /**
      * 可直接尝试的入口，按「最贴近问题」到「最通用」排序：
      * 华为/荣耀先试启动管理与受保护应用，试不到再退系统设置页。
+     *
+     * 2026-11-13 荣耀 MagicOS 专项升级：老组件名是 EMUI 时代的（systemmanager），
+     * MagicOS 8/9 换成荣耀自己的 com.hihonor.* 管家——两代都放进去，跳转前
+     * 用 resolveActivity 预检，查不到的入口不展示（宁可少一个入口，不弹「无法打开」）。
      */
     public static List<Intent> entries(Context c) {
         List<Intent> list = new ArrayList<>();
         String b = brand();
         if (HONOR.equals(b) || HUAWEI.equals(b)) {
-            list.add(component("com.huawei.systemmanager",
+            // 华为 EMUI 系（MagicOS 之前的荣耀也用这套）
+            list.add(component(c, "com.huawei.systemmanager",
                     "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"));
-            list.add(component("com.huawei.systemmanager",
+            list.add(component(c, "com.huawei.systemmanager",
                     "com.huawei.systemmanager.optimize.process.ProtectActivity"));
-            list.add(component("com.huawei.systemmanager",
+            list.add(component(c, "com.huawei.systemmanager",
                     "com.huawei.systemmanager.mainscreen.MainScreenActivity"));
-            list.add(component("com.huawei.systemmanager",
+            list.add(component(c, "com.huawei.systemmanager",
                     "com.huawei.systemmanager.appcontrol.activity.StartupAppControlActivity"));
+            // 荣耀 MagicOS 系（BRT-AN00 实测的包名族）
+            list.add(component(c, "com.hihonor.systemmanager",
+                    "com.hihonor.systemmanager.startupmgr.ui.StartupNormalAppListActivity"));
+            list.add(component(c, "com.hihonor.systemmanager",
+                    "com.hihonor.systemmanager.optimize.process.ProtectActivity"));
+            list.add(component(c, "com.hihonor.systemmanager",
+                    "com.hihonor.systemmanager.mainscreen.MainScreenActivity"));
+            list.add(component(c, "com.hihonor.systemmanager",
+                    "com.hihonor.systemmanager.appcontrol.activity.StartupAppControlActivity"));
+            // 荣耀「电池 → 更多电池设置 → 受保护应用」在 MagicOS 里藏得深，
+            // 直链电池优化页做兜底
+            list.add(new Intent("hihonor.intent.action.BATTERY_OPTIMIZATION"));
         }
         Intent detail = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
         detail.setData(Uri.parse("package:" + c.getPackageName()));
         list.add(detail);
         list.add(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
         list.add(new Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS));
-        return list;
+        // resolveActivity 预检：过滤掉这台 ROM 上不存在的入口
+        List<Intent> out = new ArrayList<>();
+        for (Intent i : list) {
+            if (i.resolveActivity(c.getPackageManager()) != null) out.add(i);
+        }
+        return out;
     }
 
-    private static Intent component(String pkg, String cls) {
+    /** 带预检的组件入口（查不到返回的 Intent 仍会被 resolveActivity 过滤掉）。 */
+    private static Intent component(Context c, String pkg, String cls) {
         Intent i = new Intent();
         i.setComponent(new ComponentName(pkg, cls));
         return i;
