@@ -306,7 +306,12 @@ public class SkipService extends AccessibilityService {
                 return true;
             }
             if (queue.size() + seen < 600) {
-                for (int i = 0; i < cur.getChildCount(); i++) queue.add(cur.getChild(i));
+                // getChild(i) 在节点被回收/窗口切换瞬间会返回 null，ArrayDeque 拒绝 null 元素直接 NPE
+                // （2026-11-13 荣耀 BRT-AN00 真机 crash 栈定位）。入队前必须判空。
+                for (int i = 0; i < cur.getChildCount(); i++) {
+                    AccessibilityNodeInfo ch = cur.getChild(i);
+                    if (ch != null && queue.size() + seen < 600) queue.add(ch);
+                }
             }
         }
         return false;
@@ -330,7 +335,12 @@ public class SkipService extends AccessibilityService {
                 return true;
             }
             if (queue.size() + seen < 600) {
-                for (int i = 0; i < cur.getChildCount(); i++) queue.add(cur.getChild(i));
+                // getChild(i) 在节点被回收/窗口切换瞬间会返回 null，ArrayDeque 拒绝 null 元素直接 NPE
+                // （2026-11-13 荣耀 BRT-AN00 真机 crash 栈定位）。入队前必须判空。
+                for (int i = 0; i < cur.getChildCount(); i++) {
+                    AccessibilityNodeInfo ch = cur.getChild(i);
+                    if (ch != null && queue.size() + seen < 600) queue.add(ch);
+                }
             }
         }
         return false;
